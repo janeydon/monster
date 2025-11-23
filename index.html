@@ -1,677 +1,916 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { User, Mail, Briefcase, Coffee, MessageSquare, MapPin, Calendar, Clock, CheckCircle, Send, Train, Bus, Car, ExternalLink, Loader2, BarChart2, PieChart, Activity, Users } from 'lucide-react';
-
-// ★★★ 請確認您的 Google Apps Script 網址已更新並重新部署 ★★★
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4dqxwPkUwcCzwFcG4faq4Ui_wdfJdZ7r-FvEa8mtGYCJS1NWeSHKDjwczRCSzPYDy8g/exec"; 
-
-// Canvas Background Component
-const ParticleBackground = () => {
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    let animationFrameId;
-    let particles = [];
-    
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-
-    class Particle {
-      constructor() {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height;
-        this.vx = (Math.random() - 0.5) * 1;
-        this.vy = (Math.random() - 0.5) * 1;
-        this.size = Math.random() * 2 + 1;
-        this.color = Math.random() > 0.5 ? 'rgba(6, 182, 212, ' : 'rgba(139, 92, 246, '; 
-      }
-      update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
-        if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
-      }
-      draw() {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fillStyle = this.color + '0.7)';
-        ctx.fill();
-      }
-    }
-
-    const initParticles = () => {
-      particles = [];
-      const numberOfParticles = Math.min(window.innerWidth / 10, 100); 
-      for (let i = 0; i < numberOfParticles; i++) {
-        particles.push(new Particle());
-      }
-    };
-    initParticles();
-
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach((particle, index) => {
-        particle.update();
-        particle.draw();
-        for (let j = index; j < particles.length; j++) {
-          const dx = particles[index].x - particles[j].x;
-          const dy = particles[index].y - particles[j].y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance < 150) {
-            ctx.beginPath();
-            ctx.strokeStyle = `rgba(100, 255, 255, ${1 - distance / 150})`;
-            ctx.lineWidth = 0.5;
-            ctx.moveTo(particles[index].x, particles[index].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.stroke();
-          }
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello World 2025 - 敏捷思維導入教學行政</title>
+    <style>
+        /* --- Reset & Base Styles --- */
+        :root {
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --primary-cyan: #06b6d4;
+            --primary-purple: #8b5cf6;
+            --glass-bg: rgba(30, 41, 59, 0.6);
+            --glass-border: rgba(71, 85, 105, 0.5);
+            --input-bg: rgba(30, 41, 59, 0.5);
         }
-      });
-      animationFrameId = requestAnimationFrame(animate);
-    };
-    animate();
 
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, []);
-
-  return (
-    <canvas 
-      ref={canvasRef} 
-      className="fixed top-0 left-0 w-full h-full z-0 pointer-events-none bg-slate-900"
-    />
-  );
-};
-
-// --- Dashboard Components ---
-
-const DashboardCard = ({ title, icon: Icon, children, className = "" }) => (
-  <div className={`bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6 shadow-xl hover:border-cyan-500/30 transition-all ${className}`}>
-    <h3 className="text-slate-400 text-sm uppercase tracking-wider font-mono mb-4 flex items-center">
-      <Icon size={16} className="mr-2 text-cyan-400" />
-      {title}
-    </h3>
-    {children}
-  </div>
-);
-
-const Dashboard = () => {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch(GOOGLE_SCRIPT_URL);
-        const result = await response.json();
-        if (result.result === 'success') {
-          setData(result.data);
-        } else {
-          throw new Error('Data format error');
-        }
-      } catch (err) {
-        console.error("Fetch error:", err);
-        setError("無法讀取數據，請確認後端已部署為 Web App");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  if (loading) return (
-    <div className="flex flex-col items-center justify-center h-64 space-y-4">
-      <Loader2 className="animate-spin text-cyan-400" size={40} />
-      <p className="text-slate-400 animate-pulse">正在從神經網絡同步數據...</p>
-    </div>
-  );
-
-  if (error) return (
-    <div className="flex flex-col items-center justify-center h-64 text-red-400">
-      <Activity size={40} className="mb-4" />
-      <p>{error}</p>
-    </div>
-  );
-
-  // Statistics Calculation
-  const totalCount = data.length;
-  
-  // Job Title Distribution
-  const jobCounts = data.reduce((acc, curr) => {
-    const job = curr.jobTitle || '未填寫';
-    acc[job] = (acc[job] || 0) + 1;
-    return acc;
-  }, {});
-  const jobDistribution = Object.entries(jobCounts)
-    .sort((a, b) => b[1] - a[1]) // Sort by count desc
-    .map(([job, count]) => ({ job, count, percent: (count / totalCount) * 100 }));
-
-  // Snacks Distribution
-  const snackYes = data.filter(d => d.snacks === '是').length;
-  const snackNo = totalCount - snackYes;
-  const snackYesPercent = totalCount > 0 ? (snackYes / totalCount) * 100 : 0;
-
-  // Recent Signups (Masked)
-  const recentSignups = [...data].reverse().slice(0, 5).map(d => ({
-    ...d,
-    maskedName: d.name ? d.name[0] + '○'.repeat(Math.max(0, d.name.length - 1)) : '匿名'
-  }));
-
-  return (
-    <div className="space-y-6 animate-fade-in-up">
-      {/* Top Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <DashboardCard title="總報名人數" icon={Users} className="relative overflow-hidden group">
-           <div className="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4 group-hover:scale-110 transition-transform">
-             <Users size={100} />
-           </div>
-           <div className="text-5xl font-extrabold text-white mb-2 tracking-tighter">
-             {totalCount}
-             <span className="text-lg text-slate-500 font-normal ml-2">人</span>
-           </div>
-           <p className="text-cyan-400 text-sm flex items-center">
-             <span className="w-2 h-2 bg-cyan-400 rounded-full mr-2 animate-pulse"></span>
-             即時更新中
-           </p>
-        </DashboardCard>
-
-        <DashboardCard title="餐點需求概況" icon={Coffee}>
-          <div className="flex items-center justify-between h-full pb-2">
-            <div className="relative w-24 h-24">
-               {/* Simple CSS Pie Chart representation */}
-               <svg viewBox="0 0 36 36" className="w-24 h-24 transform -rotate-90">
-                 <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#334155" strokeWidth="4" />
-                 <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#22d3ee" strokeWidth="4" strokeDasharray={`${snackYesPercent}, 100`} className="animate-[dash_1.5s_ease-out_forwards]" />
-               </svg>
-               <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
-                 {Math.round(snackYesPercent)}%
-               </div>
-            </div>
-            <div className="flex-1 ml-6 space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-300">需要餐點</span>
-                <span className="text-cyan-400 font-mono">{snackYes}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-400">不需要</span>
-                <span className="text-slate-500 font-mono">{snackNo}</span>
-              </div>
-            </div>
-          </div>
-        </DashboardCard>
-
-        <DashboardCard title="最近報名" icon={Activity}>
-          <div className="space-y-3">
-            {recentSignups.map((p, i) => (
-              <div key={i} className="flex justify-between items-center text-sm border-b border-slate-700/50 pb-2 last:border-0 last:pb-0">
-                <div className="flex items-center">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></div>
-                  <span className="text-slate-300">{p.maskedName}</span>
-                </div>
-                <span className="text-xs text-slate-500 px-2 py-0.5 bg-slate-700 rounded-full">{p.jobTitle}</span>
-              </div>
-            ))}
-            {recentSignups.length === 0 && <p className="text-slate-500 text-sm">尚無資料</p>}
-          </div>
-        </DashboardCard>
-      </div>
-
-      {/* Main Chart Row */}
-      <DashboardCard title="職稱分佈分析" icon={BarChart2} className="min-h-[300px]">
-        <div className="space-y-4 mt-2">
-          {jobDistribution.map((item, index) => (
-            <div key={index} className="group">
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-white group-hover:text-cyan-300 transition-colors">{item.job}</span>
-                <span className="text-slate-400 font-mono">{item.count} 人 ({Math.round(item.percent)}%)</span>
-              </div>
-              <div className="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden">
-                <div 
-                  className="bg-gradient-to-r from-cyan-500 to-blue-600 h-full rounded-full transition-all duration-1000 ease-out group-hover:shadow-[0_0_10px_cyan]"
-                  style={{ width: `${item.percent}%` }}
-                ></div>
-              </div>
-            </div>
-          ))}
-          {jobDistribution.length === 0 && <p className="text-slate-500 text-center py-10">尚無統計數據</p>}
-        </div>
-      </DashboardCard>
-    </div>
-  );
-};
-
-
-// Main Application Component
-export default function App() {
-  const [view, setView] = useState('form'); // 'form' or 'dashboard'
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    jobTitle: '',
-    snacks: '',
-    questions: ''
-  });
-  const [submitted, setSubmitted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setErrorMsg('');
-
-    if (GOOGLE_SCRIPT_URL.includes("您的_GOOGLE_APPS_SCRIPT")) {
-      alert("請先設定程式碼中的 GOOGLE_SCRIPT_URL 變數！");
-      setIsSubmitting(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      setSubmitted(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      
-    } catch (error) {
-      console.error("Submission Error:", error);
-      setErrorMsg("傳送失敗，請稍後再試。");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen text-white font-sans selection:bg-cyan-500 selection:text-black overflow-x-hidden relative">
-      <ParticleBackground />
-      <div className="fixed inset-0 z-0 opacity-10 pointer-events-none" 
-           style={{ backgroundImage: 'linear-gradient(rgba(6, 182, 212, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(6, 182, 212, 0.1) 1px, transparent 1px)', backgroundSize: '50px 50px' }}>
-      </div>
-
-      <div className="relative z-10 container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-screen">
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         
-        {/* Header Section */}
-        <header className="text-center mb-10 animate-fade-in-down w-full max-w-4xl">
-          <div className="inline-block mb-4 px-4 py-1 rounded-full border border-cyan-400/50 bg-cyan-900/20 backdrop-blur-sm text-cyan-300 text-sm font-mono tracking-widest shadow-[0_0_15px_rgba(6,182,212,0.3)]">
-            AGILE MINDSET 2025
-          </div>
-          <h1 className="text-4xl md:text-6xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 drop-shadow-lg">
-            HELLO WORLD 2025
-          </h1>
-          <h2 className="text-xl md:text-2xl text-slate-300 font-light tracking-wide mb-8">
-            開發者大會心得分享暨實務研討會
-          </h2>
-          
-          {/* View Toggle Buttons */}
-          <div className="flex justify-center space-x-4 mb-8">
-            <button 
-              onClick={() => setView('form')}
-              className={`px-6 py-2 rounded-full font-medium transition-all duration-300 flex items-center ${
-                view === 'form' 
-                ? 'bg-cyan-600 text-white shadow-[0_0_15px_cyan]' 
-                : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-              }`}
-            >
-              <Send size={16} className="mr-2" />
-              線上報名
-            </button>
-            <button 
-              onClick={() => setView('dashboard')}
-              className={`px-6 py-2 rounded-full font-medium transition-all duration-300 flex items-center ${
-                view === 'dashboard' 
-                ? 'bg-purple-600 text-white shadow-[0_0_15px_purple]' 
-                : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-              }`}
-            >
-              <BarChart2 size={16} className="mr-2" />
-              報名現況
-            </button>
-          </div>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow-x: hidden;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* --- Canvas Background --- */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .grid-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: -1;
+            opacity: 0.1;
+            pointer-events: none;
+            background-image: 
+                linear-gradient(rgba(6, 182, 212, 0.1) 1px, transparent 1px), 
+                linear-gradient(90deg, rgba(6, 182, 212, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        /* --- Layout --- */
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            padding: 3rem 1rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* --- Typography & Header --- */
+        header { text-align: center; margin-bottom: 3rem; }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 1rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(6, 182, 212, 0.5);
+            background: rgba(22, 78, 99, 0.3);
+            color: #67e8f9;
+            font-size: 0.875rem;
+            font-family: monospace;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+            box-shadow: 0 0 15px rgba(6,182,212,0.3);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #22d3ee, #3b82f6, #9333ea);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+        
+        @media (min-width: 768px) { h1 { font-size: 3.75rem; } }
+
+        h2 {
+            font-size: 1.25rem;
+            color: #cbd5e1;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+        }
+
+        /* --- Navigation --- */
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn-nav {
+            padding: 0.5rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .btn-nav.active-form {
+            background-color: #0891b2;
+            color: white;
+            box-shadow: 0 0 15px #0891b2;
+        }
+
+        .btn-nav.active-dash {
+            background-color: #7c3aed;
+            color: white;
+            box-shadow: 0 0 15px #7c3aed;
+        }
+
+        .btn-nav.inactive {
+            background-color: rgba(30, 41, 59, 0.8);
+            color: #94a3b8;
+        }
+        .btn-nav.inactive:hover { background-color: rgba(51, 65, 85, 0.8); }
+
+        /* --- Grid Layout --- */
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        @media (min-width: 1024px) {
+            .grid-layout { grid-template-columns: 1fr 2fr; }
+        }
+
+        /* --- Cards --- */
+        .card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+            margin-bottom: 1.5rem;
+        }
+
+        .card:hover { border-color: rgba(6, 182, 212, 0.5); }
+        .card.purple-hover:hover { border-color: rgba(139, 92, 246, 0.5); }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+            padding-bottom: 0.75rem;
+        }
+
+        .accent-bar {
+            width: 0.5rem;
+            height: 2rem;
+            border-radius: 9999px;
+            margin-right: 0.75rem;
+        }
+        .accent-cyan { background-color: var(--primary-cyan); box-shadow: 0 0 10px var(--primary-cyan); }
+        .accent-purple { background-color: var(--primary-purple); box-shadow: 0 0 10px var(--primary-purple); }
+
+        /* --- Info Items --- */
+        .info-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .icon-box {
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            flex-shrink: 0;
+        }
+        .icon-box.purple { background: rgba(168, 85, 247, 0.1); color: #c084fc; }
+        .icon-box.cyan { background: rgba(6, 182, 212, 0.1); color: #22d3ee; }
+        .icon-box.orange { background: rgba(249, 115, 22, 0.1); color: #fb923c; }
+        .icon-box.pink { background: rgba(236, 72, 153, 0.1); color: #f472b6; }
+        .icon-box.green { background: rgba(34, 197, 94, 0.1); color: #4ade80; }
+
+        .info-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .info-text { font-size: 1.125rem; font-weight: 600; color: white; }
+        .info-sub { font-size: 0.875rem; color: #94a3b8; }
+
+        /* --- Map --- */
+        .map-container {
+            margin-top: 1rem;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            border: 1px solid rgba(71, 85, 105, 0.5);
+            height: 200px;
+            position: relative;
+        }
+        iframe { filter: invert(90%) hue-rotate(180deg) contrast(85%); width: 100%; height: 100%; border: 0; }
+        .map-link {
+            display: block;
+            text-align: right;
+            font-size: 0.75rem;
+            color: #c084fc;
+            margin-top: 0.5rem;
+            text-decoration: none;
+        }
+        .map-link:hover { text-decoration: underline; color: #d8b4fe; }
+
+        /* --- Form --- */
+        .form-container {
+            position: relative;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(71, 85, 105, 0.3);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+        .form-glow {
+            position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+            background: linear-gradient(90deg, transparent, #06b6d4, transparent);
+            opacity: 0.5;
+        }
+
+        .form-group { margin-bottom: 1.5rem; }
+        label { display: block; color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.5rem; }
+        .input-wrapper { position: relative; }
+        
+        .input-icon {
+            position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
+            color: #64748b; pointer-events: none;
+            transition: color 0.3s;
+        }
+
+        input[type="text"], input[type="email"], select, textarea {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem 0.75rem 3rem;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            border-color: #06b6d4;
+            box-shadow: 0 0 0 1px #06b6d4;
+        }
+        
+        .form-group:focus-within .input-icon { color: #06b6d4; }
+
+        /* Radio Buttons */
+        .radio-group { display: flex; gap: 1.5rem; }
+        .radio-label { display: flex; align-items: center; cursor: pointer; color: #cbd5e1; }
+        .radio-custom {
+            width: 1.5rem; height: 1.5rem;
+            border: 2px solid #475569;
+            border-radius: 50%;
+            margin-right: 0.75rem;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s;
+        }
+        .radio-dot {
+            width: 0.75rem; height: 0.75rem;
+            background-color: transparent;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        input[type="radio"] { display: none; }
+        input[type="radio"]:checked + .radio-custom { border-color: #06b6d4; box-shadow: 0 0 10px #06b6d4; }
+        input[type="radio"]:checked + .radio-custom .radio-dot { background-color: #06b6d4; }
+        
+        /* Specific color for 'No' option */
+        input[value="no"]:checked + .radio-custom { border-color: #a855f7; box-shadow: 0 0 10px #a855f7; }
+        input[value="no"]:checked + .radio-custom .radio-dot { background-color: #a855f7; }
+
+        /* Button */
+        .btn-submit {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(90deg, #0891b2, #2563eb);
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            font-weight: bold;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 15px -3px rgba(8, 145, 178, 0.3);
+            display: flex; justify-content: center; align-items: center; gap: 0.5rem;
+        }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 20px 25px -5px rgba(8, 145, 178, 0.4); }
+        .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        /* Success Message */
+        #success-message {
+            display: none;
+            text-align: center;
+            padding: 4rem 1rem;
+        }
+        .success-icon {
+            width: 5rem; height: 5rem;
+            background: rgba(34, 197, 94, 0.2);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+        }
+
+        /* --- Dashboard --- */
+        #dashboard-view { display: none; width: 100%; max-width: 1000px; margin: 0 auto; }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-value { font-size: 3rem; font-weight: 800; line-height: 1; margin-bottom: 0.5rem; }
+        .stat-unit { font-size: 1rem; font-weight: 400; color: #64748b; margin-left: 0.5rem; }
+        .loading { text-align: center; color: #94a3b8; padding: 2rem; font-style: italic; animation: pulse 2s infinite; }
+
+        /* Simple Charts */
+        .pie-chart {
+            width: 100px; height: 100px;
+            border-radius: 50%;
+            background: conic-gradient(#06b6d4 0% 0%, #334155 0% 100%);
+            position: relative;
+        }
+        .pie-chart::after {
+            content: attr(data-percent);
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.875rem; font-weight: bold;
+        }
+        .pie-container { display: flex; align-items: center; justify-content: space-between; height: 100%; }
+        
+        .bar-chart-row { margin-bottom: 1rem; }
+        .bar-label { display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.25rem; }
+        .bar-track { width: 100%; background: #334155; height: 0.75rem; border-radius: 9999px; overflow: hidden; }
+        .bar-fill { height: 100%; background: linear-gradient(90deg, #06b6d4, #2563eb); width: 0%; transition: width 1s ease-out; }
+
+        .recent-list-item {
+            display: flex; justify-content: space-between;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+            padding: 0.5rem 0;
+            font-size: 0.875rem;
+        }
+        .recent-list-item:last-child { border-bottom: none; }
+
+        footer { margin-top: 4rem; text-align: center; color: #64748b; font-size: 0.875rem; padding-bottom: 2rem; border-top: 1px solid #1e293b; padding-top: 2rem; width: 100%; max-width: 800px; }
+
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    </style>
+</head>
+<body>
+
+    <!-- Canvas Background -->
+    <canvas id="particle-canvas"></canvas>
+    <div class="grid-overlay"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="badge">AGILE MINDSET 2025</div>
+            <h1>HELLO WORLD 2025</h1>
+            <h2>開發者大會心得分享暨實務研討會</h2>
+            <p style="color: #67e8f9; margin-top: 1rem; max-width: 600px; margin-left: auto; margin-right: auto; line-height: 1.6;">
+                敏捷思維導入教學行政，探索如何將 Agile 核心精神應用於日常專案與 QCC、OSCE 籌備，提升團隊極致效率。
+            </p>
+            
+            <div class="nav-buttons">
+                <button id="btn-show-form" class="btn-nav active-form">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    線上報名
+                </button>
+                <button id="btn-show-dashboard" class="btn-nav inactive">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                    報名現況
+                </button>
+            </div>
         </header>
 
-        {/* View Switcher */}
-        {view === 'dashboard' ? (
-           <div className="w-full max-w-5xl">
-             <Dashboard />
-           </div>
-        ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full max-w-6xl">
-          
-          {/* Left Column - Info & Traffic */}
-          <div className="lg:col-span-1 space-y-6">
-
-            {/* Event Info Card */}
-            <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6 shadow-2xl hover:border-cyan-500/50 transition-all duration-300 group">
-              <h3 className="text-xl font-bold text-white mb-6 flex items-center border-b border-slate-700 pb-3">
-                <span className="w-2 h-8 bg-cyan-500 mr-3 rounded-full shadow-[0_0_10px_cyan]"></span>
-                活動資訊
-              </h3>
-              
-              <div className="space-y-6">
-                <div className="flex items-start space-x-4 group-hover:translate-x-1 transition-transform">
-                  <div className="p-3 rounded-lg bg-blue-500/10 text-blue-400">
-                    <Calendar size={24} />
-                  </div>
-                  <div>
-                    <p className="text-slate-400 text-sm uppercase tracking-wider">Date</p>
-                    <p className="text-lg font-semibold text-white">2025 年 11 月 30 日</p>
-                    <p className="text-slate-400 text-sm">(星期日)</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4 group-hover:translate-x-1 transition-transform delay-75">
-                  <div className="p-3 rounded-lg bg-purple-500/10 text-purple-400">
-                    <Clock size={24} />
-                  </div>
-                  <div>
-                    <p className="text-slate-400 text-sm uppercase tracking-wider">Time</p>
-                    <p className="text-lg font-semibold text-white">14:00 - 17:00</p>
-                    <p className="text-slate-400 text-sm">共 3 小時</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4 group-hover:translate-x-1 transition-transform delay-100">
-                  <div className="p-3 rounded-lg bg-cyan-500/10 text-cyan-400">
-                    <MapPin size={24} />
-                  </div>
-                  <div>
-                    <p className="text-slate-400 text-sm uppercase tracking-wider">Location</p>
-                    <p className="text-lg font-semibold text-white">奇美博物館</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Traffic Info Card */}
-            <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6 shadow-2xl hover:border-purple-500/50 transition-all duration-300 group">
-              <h3 className="text-xl font-bold text-white mb-6 flex items-center border-b border-slate-700 pb-3">
-                <span className="w-2 h-8 bg-purple-500 mr-3 rounded-full shadow-[0_0_10px_purple]"></span>
-                交通資訊
-              </h3>
-              <div className="space-y-6">
-                <div className="flex items-start space-x-4 group-hover:translate-x-1 transition-transform">
-                  <div className="p-3 rounded-lg bg-orange-500/10 text-orange-400 shrink-0">
-                    <Train size={20} />
-                  </div>
-                  <div className="w-full">
-                    <p className="text-slate-400 text-xs uppercase tracking-wider font-mono">HSR / TRAIN</p>
-                    <p className="text-white font-semibold">高鐵 / 台鐵</p>
-                    <ul className="text-slate-400 text-sm mt-1 space-y-1 list-disc list-outside ml-4 mb-4">
-                      <li>高鐵台南站：搭乘 H31 接駁車至奇美博物館</li>
-                      <li>保安火車站：步行約 15 分鐘可抵達</li>
-                    </ul>
-                    <div className="mt-3 mb-2">
-                      <div className="rounded-xl overflow-hidden border border-slate-600/50 shadow-lg relative group-hover:shadow-[0_0_15px_rgba(168,85,247,0.2)] transition-all duration-300 h-48">
-                        <iframe 
-                          width="100%" 
-                          height="100%" 
-                          frameBorder="0" 
-                          title="Google Map to Chimei Museum"
-                          marginHeight="0" 
-                          marginWidth="0" 
-                          src="https://maps.google.com/maps?q=奇美博物館&t=&z=15&ie=UTF8&iwloc=&output=embed"
-                          style={{ filter: 'invert(90%) hue-rotate(180deg) contrast(85%)' }} 
-                          className="w-full h-full opacity-80 hover:opacity-100 transition-opacity"
-                        ></iframe>
-                        <div className="absolute inset-0 pointer-events-none border border-purple-500/10 rounded-xl"></div>
-                        <div className="absolute inset-0 pointer-events-none opacity-10 bg-[url('https://www.transparenttextures.com/patterns/diagmonds-light.png')]"></div>
-                      </div>
-                      <a 
-                        href="https://maps.google.com?q=奇美博物館" 
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="flex items-center justify-end mt-2 text-xs text-purple-400 hover:text-purple-300 transition-colors gap-1 group/link"
-                      >
-                        <span className="group-hover/link:underline underline-offset-4">開啟 Google Maps 導航</span>
-                        <ExternalLink size={12} className="transform group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
-                      </a>
+        <!-- Form View -->
+        <div id="form-view" class="grid-layout">
+            <!-- Left Side: Info -->
+            <div class="left-column">
+                <!-- Activity Info -->
+                <div class="card">
+                    <div class="card-title">
+                        <div class="accent-bar accent-cyan"></div>
+                        活動資訊
                     </div>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-4 group-hover:translate-x-1 transition-transform delay-75">
-                  <div className="p-3 rounded-lg bg-pink-500/10 text-pink-400 shrink-0">
-                    <Bus size={20} />
-                  </div>
-                  <div>
-                    <p className="text-slate-400 text-xs uppercase tracking-wider font-mono">BUS LINES</p>
-                    <p className="text-white font-semibold">公車資訊</p>
-                    <p className="text-slate-400 text-sm mt-1">紅3、紅4、市區公車 5 號</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-4 group-hover:translate-x-1 transition-transform delay-100">
-                  <div className="p-3 rounded-lg bg-green-500/10 text-green-400 shrink-0">
-                    <Car size={20} />
-                  </div>
-                  <div>
-                    <p className="text-slate-400 text-xs uppercase tracking-wider font-mono">DRIVING</p>
-                    <p className="text-white font-semibold">自行開車</p>
-                    <p className="text-slate-400 text-sm mt-1 text-justify">
-                      國道 1 或 3 號 → 台 86 線 (往西) → 台南交流道下 → 台一線
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-r from-cyan-500/20 to-purple-500/20 rounded-2xl p-6 border border-white/5 backdrop-blur-sm hidden lg:block">
-              <div className="text-center">
-                <p className="text-sm text-cyan-300 font-mono mb-2">SYSTEM STATUS</p>
-                <div className="flex justify-center items-center space-x-2">
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                  </span>
-                  <span className="text-green-400 font-bold tracking-widest">ONLINE</span>
-                </div>
-                <p className="text-xs text-slate-400 mt-2">Registration Protocol Active</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Registration Form */}
-          <div className="lg:col-span-2">
-            <div className="relative bg-slate-900/60 backdrop-blur-xl border border-slate-600/30 rounded-3xl p-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden">
-              
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50"></div>
-
-              {!submitted ? (
-                <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
-                  <div className="flex items-center justify-between mb-8">
-                    <h3 className="text-2xl font-bold text-white">線上報名通道</h3>
-                    <span className="px-3 py-1 bg-cyan-900/30 border border-cyan-500/30 rounded text-xs text-cyan-300 font-mono">SECURE FORM</span>
-                  </div>
-
-                  {/* Name & Email */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="group">
-                      <label className="block text-slate-400 text-sm mb-2 ml-1 group-focus-within:text-cyan-400 transition-colors">姓名</label>
-                      <div className="relative">
-                        <User className="absolute left-4 top-3.5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" size={20} />
-                        <input 
-                          type="text" 
-                          name="name"
-                          required
-                          disabled={isSubmitting}
-                          className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 disabled:opacity-50 transition-all"
-                          placeholder="請輸入您的姓名"
-                          value={formData.name}
-                          onChange={handleChange}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="group">
-                      <label className="block text-slate-400 text-sm mb-2 ml-1 group-focus-within:text-cyan-400 transition-colors">電子郵件 (Email)</label>
-                      <div className="relative">
-                        <Mail className="absolute left-4 top-3.5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" size={20} />
-                        <input 
-                          type="email" 
-                          name="email"
-                          required
-                          disabled={isSubmitting}
-                          className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 disabled:opacity-50 transition-all"
-                          placeholder="example@hospital.org"
-                          value={formData.email}
-                          onChange={handleChange}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Job Title */}
-                  <div className="group">
-                    <label className="block text-slate-400 text-sm mb-2 ml-1 group-focus-within:text-cyan-400 transition-colors">職稱 <span className="text-red-400">*</span></label>
-                    <div className="relative">
-                      <Briefcase className="absolute left-4 top-3.5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" size={20} />
-                      <select 
-                        name="jobTitle"
-                        required
-                        disabled={isSubmitting}
-                        className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 disabled:opacity-50 transition-all appearance-none cursor-pointer"
-                        value={formData.jobTitle}
-                        onChange={handleChange}
-                      >
-                        <option value="" disabled>-- 請選擇您的職稱 --</option>
-                        <option value="醫師" className="bg-slate-800">醫師</option>
-                        <option value="護理師" className="bg-slate-800">護理師</option>
-                        <option value="醫事人員" className="bg-slate-800">醫事人員</option>
-                        <option value="行政人員" className="bg-slate-800">行政人員</option>
-                        <option value="其他" className="bg-slate-800">其他</option>
-                      </select>
-                      <div className="absolute right-4 top-4 pointer-events-none border-t-4 border-t-slate-400 border-l-4 border-l-transparent border-r-4 border-r-transparent"></div>
-                    </div>
-                  </div>
-
-                  {/* Snacks */}
-                  <div className="group">
-                    <label className="block text-slate-400 text-sm mb-3 ml-1">是否需要茶水點心？</label>
-                    <div className="flex space-x-6">
-                      <label className="relative flex items-center cursor-pointer group/radio">
-                        <input 
-                          type="radio" 
-                          name="snacks" 
-                          value="yes" 
-                          className="peer sr-only"
-                          disabled={isSubmitting}
-                          onChange={handleChange}
-                          checked={formData.snacks === 'yes'}
-                        />
-                        <div className="w-6 h-6 border-2 border-slate-600 rounded-full peer-checked:border-cyan-400 peer-checked:shadow-[0_0_10px_cyan] transition-all flex items-center justify-center">
-                          <div className="w-3 h-3 bg-cyan-400 rounded-full opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                    <div class="info-item">
+                        <div class="icon-box">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                         </div>
-                        <span className="ml-3 text-slate-300 group-hover/radio:text-white transition-colors">是，我需要</span>
-                        <Coffee className="ml-2 text-slate-500 peer-checked:text-amber-400 transition-colors" size={18}/>
-                      </label>
-                      
-                      <label className="relative flex items-center cursor-pointer group/radio">
-                        <input 
-                          type="radio" 
-                          name="snacks" 
-                          value="no" 
-                          className="peer sr-only"
-                          disabled={isSubmitting}
-                          onChange={handleChange}
-                          checked={formData.snacks === 'no'}
-                        />
-                        <div className="w-6 h-6 border-2 border-slate-600 rounded-full peer-checked:border-purple-400 peer-checked:shadow-[0_0_10px_purple] transition-all flex items-center justify-center">
-                          <div className="w-3 h-3 bg-purple-400 rounded-full opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                        <div>
+                            <div class="info-label">Date</div>
+                            <div class="info-text">2025 年 11 月 30 日</div>
+                            <div class="info-sub">(星期日)</div>
                         </div>
-                        <span className="ml-3 text-slate-300 group-hover/radio:text-white transition-colors">否</span>
-                      </label>
                     </div>
-                  </div>
-
-                  {/* Questions */}
-                  <div className="group">
-                    <label className="block text-slate-400 text-sm mb-2 ml-1 group-focus-within:text-cyan-400 transition-colors">會前提問</label>
-                    <div className="relative">
-                      <MessageSquare className="absolute left-4 top-3.5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" size={20} />
-                      <textarea 
-                        name="questions"
-                        disabled={isSubmitting}
-                        className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 disabled:opacity-50 transition-all min-h-[100px]"
-                        placeholder="您目前在行政工作上遇到的困難？或最想了解關於「敏捷」的哪個部分？"
-                        value={formData.questions}
-                        onChange={handleChange}
-                      />
+                    <div class="info-item">
+                        <div class="icon-box purple">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        </div>
+                        <div>
+                            <div class="info-label">Time</div>
+                            <div class="info-text">14:00 - 17:00</div>
+                            <div class="info-sub">共 3 小時</div>
+                        </div>
                     </div>
-                  </div>
-
-                  {errorMsg && (
-                    <div className="text-red-400 text-sm text-center bg-red-900/20 p-2 rounded border border-red-500/30">
-                      {errorMsg}
+                    <div class="info-item">
+                        <div class="icon-box cyan">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        </div>
+                        <div>
+                            <div class="info-label">Location</div>
+                            <div class="info-text">奇美博物館</div>
+                        </div>
                     </div>
-                  )}
-
-                  {/* Submit Button */}
-                  <button 
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full py-4 mt-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center group"
-                  >
-                    {isSubmitting ? (
-                      <span className="flex items-center">
-                        <Loader2 className="animate-spin mr-2" size={20} />
-                        資料傳送中...
-                      </span>
-                    ) : (
-                      <>
-                        <span className="mr-2 tracking-widest">確認報名</span>
-                        <Send size={20} className="group-hover:translate-x-1 transition-transform" />
-                      </>
-                    )}
-                  </button>
-                </form>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
-                  <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(34,197,94,0.5)]">
-                    <CheckCircle size={40} className="text-green-400" />
-                  </div>
-                  <h3 className="text-3xl font-bold text-white mb-2">報名成功！</h3>
-                  <p className="text-slate-300 mb-8">我們已收到您的資料，並將資料同步至雲端資料庫。</p>
-                  <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700 text-sm text-slate-400 max-w-md">
-                    <p>系統將自動發送確認信至您的信箱：</p>
-                    <p className="text-cyan-400 mt-1">{formData.email}</p>
-                  </div>
-                  <button 
-                    onClick={() => {setSubmitted(false); setFormData({...formData, questions: '', snacks: ''})}}
-                    className="mt-8 text-slate-500 hover:text-white underline underline-offset-4 transition-colors"
-                  >
-                    填寫下一筆報名
-                  </button>
                 </div>
-              )}
+
+                <!-- Traffic Info -->
+                <div class="card purple-hover">
+                    <div class="card-title">
+                        <div class="accent-bar accent-purple"></div>
+                        交通資訊
+                    </div>
+                    <!-- Train -->
+                    <div class="info-item">
+                        <div class="icon-box orange">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="3" width="12" height="13" rx="2"></rect><path d="M9 21h6"></path><path d="M9 16l-5 5"></path><path d="M15 16l5 5"></path><path d="M8 21v-5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v5"></path><path d="M15 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0"></path><line x1="6" y1="12" x2="18" y2="12"></line></svg>
+                        </div>
+                        <div style="width: 100%;">
+                            <div class="info-label">HSR / TRAIN</div>
+                            <div class="info-text" style="font-size: 1rem;">高鐵 / 台鐵</div>
+                            <ul style="font-size: 0.875rem; color: #94a3b8; margin-left: 1.2rem; margin-top: 0.25rem;">
+                                <li>高鐵台南站：搭乘 H31 接駁車</li>
+                                <li>保安火車站：步行約 15 分鐘</li>
+                            </ul>
+                            <!-- Map -->
+                            <div class="map-container">
+                                <iframe src="https://maps.google.com/maps?q=奇美博物館&t=&z=15&ie=UTF8&iwloc=&output=embed"></iframe>
+                            </div>
+                            <a href="https://maps.google.com?q=奇美博物館" target="_blank" class="map-link">開啟 Google Maps 導航 &rarr;</a>
+                        </div>
+                    </div>
+                    <!-- Bus -->
+                    <div class="info-item">
+                        <div class="icon-box pink">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"></rect><path d="M6 21v-3"></path><path d="M18 21v-3"></path><path d="M2 12h20"></path></svg>
+                        </div>
+                        <div>
+                            <div class="info-label">BUS LINES</div>
+                            <div class="info-text" style="font-size: 1rem;">公車資訊</div>
+                            <div class="info-sub">紅3、紅4、市區公車 5 號</div>
+                        </div>
+                    </div>
+                    <!-- Car -->
+                    <div class="info-item">
+                        <div class="icon-box green">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12a2 2 0 0 0 2 2h3"></path><circle cx="7" cy="17" r="2"></circle><circle cx="17" cy="17" r="2"></circle></svg>
+                        </div>
+                        <div>
+                            <div class="info-label">DRIVING</div>
+                            <div class="info-text" style="font-size: 1rem;">自行開車</div>
+                            <div class="info-sub">國道 1/3 號 → 台 86 線 (往西)</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
+
+            <!-- Right Side: Form -->
+            <div class="right-column">
+                <div class="form-container">
+                    <div class="form-glow"></div>
+                    
+                    <div id="registration-form-wrapper">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                            <h3 style="font-size: 1.5rem; font-weight: bold;">線上報名通道</h3>
+                            <span style="font-size: 0.75rem; padding: 0.25rem 0.75rem; border: 1px solid rgba(6,182,212,0.3); background: rgba(22,78,99,0.3); color: #67e8f9; border-radius: 4px;">SECURE</span>
+                        </div>
+
+                        <form id="registrationForm">
+                            <div style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                                <!-- Name -->
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label>姓名</label>
+                                    <div class="input-wrapper">
+                                        <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                        <input type="text" name="name" placeholder="請輸入您的姓名" required>
+                                    </div>
+                                </div>
+                                <!-- Email -->
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label>電子郵件 (Email)</label>
+                                    <div class="input-wrapper">
+                                        <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                                        <input type="email" name="email" placeholder="example@hospital.org" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Job Title -->
+                            <div class="form-group">
+                                <label>職稱 <span style="color: #f87171;">*</span></label>
+                                <div class="input-wrapper">
+                                    <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                                    <select name="jobTitle" required style="cursor: pointer;">
+                                        <option value="" disabled selected>-- 請選擇您的職稱 --</option>
+                                        <option value="醫師" style="color: black;">醫師</option>
+                                        <option value="護理師" style="color: black;">護理師</option>
+                                        <option value="醫事人員" style="color: black;">醫事人員</option>
+                                        <option value="行政人員" style="color: black;">行政人員</option>
+                                        <option value="其他" style="color: black;">其他</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Snacks -->
+                            <div class="form-group">
+                                <label style="margin-bottom: 0.75rem;">是否需要茶水點心？</label>
+                                <div class="radio-group">
+                                    <label class="radio-label">
+                                        <input type="radio" name="snacks" value="yes">
+                                        <div class="radio-custom"><div class="radio-dot"></div></div>
+                                        <span>是，我需要</span>
+                                        <svg style="margin-left: 0.5rem; color: #64748b;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>
+                                    </label>
+                                    <label class="radio-label">
+                                        <input type="radio" name="snacks" value="no">
+                                        <div class="radio-custom"><div class="radio-dot"></div></div>
+                                        <span>否</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Questions -->
+                            <div class="form-group">
+                                <label>會前提問</label>
+                                <div class="input-wrapper">
+                                    <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="top: 1.5rem;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                    <textarea name="questions" rows="4" placeholder="您目前在行政工作上遇到的困難？或最想了解關於「敏捷」的哪個部分？"></textarea>
+                                </div>
+                            </div>
+
+                            <button type="submit" id="submitBtn" class="btn-submit">
+                                <span>確認報名</span>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Success Message -->
+                    <div id="success-message">
+                        <div class="success-icon">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </div>
+                        <h3 style="font-size: 1.75rem; margin-bottom: 0.5rem;">報名成功！</h3>
+                        <p style="color: #cbd5e1; margin-bottom: 2rem;">我們已收到您的資料，並將資料同步至雲端資料庫。</p>
+                        <button class="btn-submit" onclick="resetForm()" style="background: rgba(30,41,59,0.5); border: 1px solid #475569;">
+                            填寫下一筆報名
+                        </button>
+                    </div>
+
+                </div>
+            </div>
         </div>
-        )}
 
-        {/* Footer */}
-        <footer className="mt-20 text-center text-slate-500 text-sm border-t border-slate-800 pt-8 w-full max-w-4xl">
-          <p className="mb-2">主辦單位：教學部 &nbsp;|&nbsp; 聯絡人：盧英云 (分機 57425)</p>
-          <p className="text-xs text-slate-600">本報名資料僅供本次研討會聯繫與餐點統計使用，我們將嚴格保護您的個人隱私。</p>
-          <p className="mt-4 text-xs font-mono text-slate-700">POWERED BY AGILE TECH © 2025</p>
+        <!-- Dashboard View -->
+        <div id="dashboard-view">
+            <div id="dashboard-loading" class="loading">正在讀取神經網絡數據...</div>
+            
+            <div id="dashboard-content" style="display: none;">
+                <!-- Stats Row -->
+                <div class="dashboard-grid">
+                    <!-- Total Count -->
+                    <div class="card" style="margin-bottom: 0; position: relative; overflow: hidden;">
+                        <svg style="position: absolute; right: -10px; top: -10px; opacity: 0.1; color: #22d3ee;" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        <h3 class="info-label" style="margin-bottom: 1rem; color: #67e8f9;">總報名人數</h3>
+                        <div style="display: flex; align-items: baseline;">
+                            <span class="stat-value" id="total-count">0</span>
+                            <span class="stat-unit">人</span>
+                        </div>
+                        <p style="font-size: 0.75rem; color: #06b6d4; margin-top: 0.5rem;">● 即時更新中</p>
+                    </div>
+
+                    <!-- Snacks Chart -->
+                    <div class="card" style="margin-bottom: 0;">
+                        <h3 class="info-label" style="margin-bottom: 1rem; color: #c084fc;">餐點需求概況</h3>
+                        <div class="pie-container">
+                            <div class="pie-chart" id="snack-pie" data-percent="0%"></div>
+                            <div style="flex: 1; margin-left: 1.5rem;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.875rem;">
+                                    <span style="color: #cbd5e1;">需要</span>
+                                    <span style="color: #67e8f9;" id="snack-yes-count">0</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem;">
+                                    <span style="color: #64748b;">不需要</span>
+                                    <span style="color: #94a3b8;" id="snack-no-count">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent -->
+                    <div class="card" style="margin-bottom: 0;">
+                        <h3 class="info-label" style="margin-bottom: 1rem; color: #fb923c;">最近報名</h3>
+                        <div id="recent-list">
+                            <!-- Items will be injected here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Job Chart -->
+                <div class="card">
+                    <div class="card-title">
+                        <div class="accent-bar accent-cyan"></div>
+                        職稱分佈分析
+                    </div>
+                    <div id="job-chart-container" style="padding-top: 0.5rem;">
+                        <!-- Bars will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>主辦單位：教學部 | 聯絡人：盧英云 (分機 57425)</p>
+            <p style="margin-top: 0.5rem;">POWERED BY AGILE TECH © 2025</p>
         </footer>
-
-      </div>
     </div>
-  );
-}
+
+    <!-- Logic Script -->
+    <script>
+        // --- Configuration ---
+        const GAS_URL = "https://script.google.com/macros/s/AKfycby4dqxwPkUwcCzwFcG4faq4Ui_wdfJdZ7r-FvEa8mtGYCJS1NWeSHKDjwczRCSzPYDy8g/exec";
+
+        // --- Particle Background Logic ---
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 1;
+                this.vy = (Math.random() - 0.5) * 1;
+                this.size = Math.random() * 2 + 1;
+                this.color = Math.random() > 0.5 ? 'rgba(6, 182, 212,' : 'rgba(139, 92, 246,';
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color + '0.7)';
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            const count = Math.min(window.innerWidth / 10, 80);
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach((p, i) => {
+                p.update();
+                p.draw();
+                // Draw connections
+                for (let j = i; j < particles.length; j++) {
+                    const dx = p.x - particles[j].x;
+                    const dy = p.y - particles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 150) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = `rgba(100, 255, 255, ${1 - dist / 150})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            });
+            requestAnimationFrame(animate);
+        }
+
+        initParticles();
+        animate();
+
+        // --- Navigation Logic ---
+        const btnForm = document.getElementById('btn-show-form');
+        const btnDash = document.getElementById('btn-show-dashboard');
+        const viewForm = document.getElementById('form-view');
+        const viewDash = document.getElementById('dashboard-view');
+
+        btnForm.addEventListener('click', () => {
+            viewForm.style.display = 'grid';
+            viewDash.style.display = 'none';
+            btnForm.className = 'btn-nav active-form';
+            btnDash.className = 'btn-nav inactive';
+        });
+
+        btnDash.addEventListener('click', () => {
+            viewForm.style.display = 'none';
+            viewDash.style.display = 'block';
+            btnForm.className = 'btn-nav inactive';
+            btnDash.className = 'btn-nav active-dash';
+            loadDashboardData();
+        });
+
+        // --- Form Submission Logic ---
+        const form = document.getElementById('registrationForm');
+        const formWrapper = document.getElementById('registration-form-wrapper');
+        const successMsg = document.getElementById('success-message');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = submitBtn.querySelector('span');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            // UI Loading State
+            submitBtn.disabled = true;
+            btnText.textContent = "傳送中...";
+
+            // Collect Data
+            const formData = new FormData(form);
+            const data = {
+                name: formData.get('name'),
+                email: formData.get('email'),
+                jobTitle: formData.get('jobTitle'),
+                snacks: formData.get('snacks'),
+                questions: formData.get('questions')
+            };
+
+            // Send to GAS
+            fetch(GAS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Avoid CORS preflight
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                // Since 'no-cors' might be opaque, we assume success if no network error
+                showSuccess();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('傳送失敗，請稍後再試。');
+                submitBtn.disabled = false;
+                btnText.textContent = "確認報名";
+            });
+        });
+
+        function showSuccess() {
+            formWrapper.style.display = 'none';
+            successMsg.style.display = 'block';
+            submitBtn.disabled = false;
+            btnText.textContent = "確認報名";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            form.reset();
+            formWrapper.style.display = 'block';
+            successMsg.style.display = 'none';
+        }
+
+        // --- Dashboard Logic ---
+        function loadDashboardData() {
+            const loading = document.getElementById('dashboard-loading');
+            const content = document.getElementById('dashboard-content');
+            
+            loading.style.display = 'block';
+            content.style.display = 'none';
+
+            fetch(GAS_URL)
+                .then(res => res.json())
+                .then(json => {
+                    if(json.result === 'success') {
+                        renderDashboard(json.data);
+                        loading.style.display = 'none';
+                        content.style.display = 'block';
+                    } else {
+                        throw new Error('Data format error');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    loading.textContent = "無法讀取數據，請確認後端設定。";
+                });
+        }
+
+        function renderDashboard(data) {
+            const total = data.length;
+            document.getElementById('total-count').textContent = total;
+
+            // 1. Snack Stats
+            const snackYes = data.filter(d => d.snacks === '是').length;
+            const snackNo = total - snackYes;
+            const yesPercent = total > 0 ? Math.round((snackYes / total) * 100) : 0;
+            
+            document.getElementById('snack-yes-count').textContent = snackYes;
+            document.getElementById('snack-no-count').textContent = snackNo;
+            
+            // Update Pie Chart CSS
+            const pie = document.getElementById('snack-pie');
+            pie.style.background = `conic-gradient(#06b6d4 0% ${yesPercent}%, #334155 ${yesPercent}% 100%)`;
+            pie.setAttribute('data-percent', yesPercent + '%');
+
+            // 2. Recent Signups
+            const recentList = document.getElementById('recent-list');
+            recentList.innerHTML = '';
+            const recent = data.slice().reverse().slice(0, 5); // Copy, reverse, take 5
+            
+            if (recent.length === 0) {
+                recentList.innerHTML = '<div style="color:#64748b; text-align:center; padding:1rem;">尚無資料</div>';
+            } else {
+                recent.forEach(item => {
+                    const name = item.name ? item.name[0] + '○'.repeat(Math.max(0, item.name.length - 1)) : '匿名';
+                    const div = document.createElement('div');
+                    div.className = 'recent-list-item';
+                    div.innerHTML = `
+                        <div style="display:flex; align-items:center;">
+                            <div style="width:6px; height:6px; background:#4ade80; border-radius:50%; margin-right:8px;"></div>
+                            <span style="color:#cbd5e1;">${name}</span>
+                        </div>
+                        <span style="background:#334155; padding:2px 8px; border-radius:99px; font-size:12px; color:#94a3b8;">${item.jobTitle || '未填'}</span>
+                    `;
+                    recentList.appendChild(div);
+                });
+            }
+
+            // 3. Job Distribution
+            const jobCounts = {};
+            data.forEach(d => {
+                const job = d.jobTitle || '未填寫';
+                jobCounts[job] = (jobCounts[job] || 0) + 1;
+            });
+            
+            const sortedJobs = Object.entries(jobCounts)
+                .sort((a, b) => b[1] - a[1]);
+
+            const chartContainer = document.getElementById('job-chart-container');
+            chartContainer.innerHTML = '';
+
+            if (sortedJobs.length === 0) {
+                chartContainer.innerHTML = '<div style="color:#64748b; text-align:center; padding:2rem;">尚無統計數據</div>';
+            } else {
+                sortedJobs.forEach(([job, count]) => {
+                    const percent = total > 0 ? (count / total) * 100 : 0;
+                    const div = document.createElement('div');
+                    div.className = 'bar-chart-row';
+                    div.innerHTML = `
+                        <div class="bar-label">
+                            <span style="color:white;">${job}</span>
+                            <span style="color:#94a3b8; font-family:monospace;">${count} 人 (${Math.round(percent)}%)</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="bar-fill" style="width: ${percent}%;"></div>
+                        </div>
+                    `;
+                    chartContainer.appendChild(div);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
